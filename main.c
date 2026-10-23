@@ -2,28 +2,58 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(void) {
-  size_t bytes = 1024;
-  void *arena = malloc(bytes);
-
-  if (arena == NULL) {
-    return 1;
-  }
-
-  struct BlockHeader {
+struct BlockHeader {
     size_t size_and_flags;
-  };
+};
 
-  printf("BlockHeader size: %zu\n", sizeof(struct BlockHeader));
+struct BlockFooter {
+    size_t size;
+};
 
-  struct BlockHeader header = {.size_and_flags = bytes};
-  size_t original_size = header.size_and_flags & ~1;
-  int allocated = header.size_and_flags & 1;
+int main(void) {
+    size_t bytes = 1024;
+    void *arena = malloc(bytes);
 
-  printf("original_size: %zu\n", original_size);
-  printf("allocated: %d\n", allocated);
+    if (arena == NULL) {
+        return 1;
+    }
 
-  free(arena);
+    // Header
+    struct BlockHeader *header_ptr = (struct BlockHeader *)(arena);
+    header_ptr->size_and_flags = bytes;
 
-  return 0;
+    int allocated = header_ptr->size_and_flags & (size_t)1;
+    size_t original_size = header_ptr->size_and_flags & ~(size_t)1;
+    size_t header_size = sizeof(struct BlockHeader);
+    size_t footer_size = sizeof(struct BlockFooter);
+
+    printf("BlockHeader size: %zu\n", sizeof(struct BlockHeader));
+    printf("allocated: %d\n", allocated);
+    printf("original_size: %zu\n", original_size);
+
+    // BODY
+    size_t payload = header_ptr->size_and_flags - (header_size + footer_size);
+    printf("Bozy size: %zu\n", payload);
+
+    // FOOTER
+    unsigned char *memory = (unsigned char *)arena;
+    memory += (bytes - footer_size);
+
+    struct BlockFooter *footer_ptr = (struct BlockFooter *)memory;
+    footer_ptr->size = original_size;
+
+    printf("BlockFooter size: %zu\n", footer_size);
+    printf("Size in footer: %zu\n", footer_ptr->size);
+
+    // RULES
+    size_t min_block_size = header_size + (size_t)16 + footer_size;
+    if (original_size != footer_ptr->size || original_size < min_block_size || payload < 16) {
+        free(arena);
+        return 1;
+    }
+
+    printf("Arena size: %zu\n", header_ptr->size_and_flags);
+    free(arena);
+
+    return 0;
 }
