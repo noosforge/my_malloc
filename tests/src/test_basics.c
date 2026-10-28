@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 int test_malloc_basic(void) {
-    printf("---- test malloc basic ----\n");
     void *arena = create_arena();
 
     if (arena == NULL) {
@@ -61,5 +60,3 @@ int test_malloc_basic(void) {
     free(arena);
     return failures;
 }
-
-int main(void) { return test_malloc_basic() != 0; }
