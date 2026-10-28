@@ -7,7 +7,7 @@ int coallease(struct BlockHeader *header, struct BlockFooter *footer) {
 
     unsigned char *header_bytes = (unsigned char *)header;
     unsigned char *footer_bytes = (unsigned char *)footer;
-    size_t new_size = footer_bytes - header_bytes;
+    size_t new_size = (footer_bytes + sizeof(struct BlockFooter)) - header_bytes;
     size_t aligned_size = check_alignment(new_size);
 
     header->size_and_flags = aligned_size;

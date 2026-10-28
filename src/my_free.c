@@ -1,12 +1,17 @@
 #include "coallease.h"
 #include "helpers.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-void *my_free(void *payload) {
+void *my_free(void *payload, void *arena) {
     if (payload == NULL) {
         return NULL;
     }
+
+    unsigned char *arena_start = (unsigned char *)arena;
+    unsigned char *arena_end = (unsigned char *)arena + (size_t)1024;
+
     // Header - 8bytes before payload
     unsigned char *header_bytes = (unsigned char *)payload - (size_t)8;
     struct BlockHeader *header = (struct BlockHeader *)header_bytes;
@@ -14,7 +19,8 @@ void *my_free(void *payload) {
     size_t header_original_size = get_original_size(header);
 
     // Header Footer
-    unsigned char *header_footer_bytes = header_bytes + header_original_size;
+    unsigned char *header_footer_bytes =
+        header_bytes + (header_original_size - sizeof(struct BlockFooter));
     struct BlockFooter *header_footer = (struct BlockFooter *)header_footer_bytes;
 
     // free the header, its allocated
@@ -23,14 +29,15 @@ void *my_free(void *payload) {
     unsigned char *curr_back_header = header_bytes; // used to track the most left free header
     struct BlockHeader *back_header = NULL;
 
-    while (1) {
+    while (curr_back_header > arena_start) {
         // BACK Footer
         unsigned char *back_footer_bytes = curr_back_header - (size_t)8;
         struct BlockFooter *back_footer = (struct BlockFooter *)back_footer_bytes;
 
         // Back Header
+        // to get to the header, move footer_start_bytes back.
         unsigned char *back_header_bytes =
-            back_footer_bytes - (back_footer->size + sizeof(struct BlockFooter));
+            back_footer_bytes - (back_footer->size - sizeof(struct BlockFooter));
 
         struct BlockHeader *prev_back_header = (struct BlockHeader *)back_header_bytes;
 
@@ -47,7 +54,7 @@ void *my_free(void *payload) {
     unsigned char *curr_front_header = header_bytes + header->size_and_flags;
     struct BlockHeader *front_header = NULL;
     struct BlockFooter *front_footer = NULL;
-    while (1) {
+    while (curr_front_header <= (arena_end - (size_t)32)) {
         // Front Header
         struct BlockHeader *next_front_header = (struct BlockHeader *)curr_front_header;
 
@@ -67,7 +74,8 @@ void *my_free(void *payload) {
 
         // Front Footer
         unsigned char *front_footer_bytes =
-            (unsigned char *)front_header + front_header_original_size;
+            (unsigned char *)front_header +
+            (front_header_original_size - sizeof(struct BlockFooter));
         front_footer = (struct BlockFooter *)front_footer_bytes;
     }
 
