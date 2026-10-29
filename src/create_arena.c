@@ -3,43 +3,38 @@
 #include <stdlib.h>
 
 void *create_arena(void) {
-    size_t bytes = 1024;
-    void *arena = malloc(bytes);
+    void *arena = malloc(TOTAL_ARENA_BYTES);
 
     if (arena == NULL) {
         return NULL;
     }
 
     // Header
-    struct BlockHeader *header_ptr = (struct BlockHeader *)(arena);
-    header_ptr->size_and_flags = bytes;
-
-    // BODY
-    size_t header_size = sizeof(struct BlockHeader);
-    size_t footer_size = sizeof(struct BlockFooter);
+    struct BlockHeader *header = (struct BlockHeader *)(arena);
+    header->size_and_flags = TOTAL_ARENA_BYTES;
 
     // PAYLOAD
-    size_t payload = header_ptr->size_and_flags - (header_size + footer_size);
-    printf("Bozy size: %zu\n", payload);
+    size_t payload = header->size_and_flags - (BLOCK_HEADER_SIZE + BLOCK_FOOTER_SIZE);
 
     // FOOTER
-    unsigned char *memory = (unsigned char *)arena;
-    memory += (bytes - footer_size);
-    size_t original_size = header_ptr->size_and_flags & ~(size_t)1;
-    struct BlockFooter *footer_ptr = (struct BlockFooter *)memory;
+    unsigned char *arena_start_bytes = (unsigned char *)arena;
+    arena_start_bytes += (TOTAL_ARENA_BYTES - BLOCK_FOOTER_SIZE);
+    size_t original_size = get_original_size(header);
+    struct BlockFooter *footer_ptr = (struct BlockFooter *)arena_start_bytes;
     footer_ptr->size = original_size;
 
-    printf("BlockFooter size: %zu\n", footer_size);
+    printf("Bozy size: %zu\n", payload);
+    printf("BlockFooter size: %zu\n", BLOCK_FOOTER_SIZE);
     printf("Size in footer: %zu\n", footer_ptr->size);
 
     // RULES
-    size_t min_block_size = header_size + (size_t)16 + footer_size;
+    size_t min_block_size = BLOCK_HEADER_SIZE + (size_t)16 + BLOCK_FOOTER_SIZE;
     if (original_size != footer_ptr->size || original_size < min_block_size || payload < 16) {
         free(arena);
         return NULL;
     }
 
-    printf("Arena size: %zu\n", header_ptr->size_and_flags);
+    printf("Arena size: %zu\n", header->size_and_flags);
 
     return arena;
 }
