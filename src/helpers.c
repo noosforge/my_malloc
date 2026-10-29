@@ -6,9 +6,7 @@ size_t check_alignment(size_t request) {
     return aligned;
 }
 
-size_t get_original_size(struct BlockHeader *curr_header) {
-    return curr_header->size_and_flags & ~(size_t)1;
-}
-size_t allocated(struct BlockHeader *curr_header) {
-    return curr_header->size_and_flags & (size_t)1;
-}
+size_t get_original_size(struct BlockHeader *curr_header) { return curr_header->size_and_flags & ~(size_t)1; }
+size_t allocated(struct BlockHeader *curr_header) { return curr_header->size_and_flags & (size_t)1; }
+
+void allocate_header(struct BlockHeader *curr_header) { curr_header->size_and_flags |= (size_t)1; }
